@@ -5,8 +5,11 @@ Google ドライブの指定フォルダ以下を再帰走査し、指定期間�
 ## セットアップ
 
 1. Google Cloud で OAuth クライアント ID を作成します。
-   - 種類: デスクトップアプリ
    - 有効にする API: Google Drive API
+   - OAuth 同意画面を設定します。
+   - 公開ステータスがテストの場合は、実行時に認証する Google アカウントをテストユーザに追加します。
+   - OAuth クライアント ID の種類は **Web アプリケーション** を選びます。
+   - 承認済みのリダイレクト URI に `http://localhost:3000/oauth2callback` を追加します。
 2. クライアント JSON をダウンロードします。
 3. 依存 gem をインストールします。
 
@@ -27,7 +30,7 @@ bin/gdrive-audit \
   --format csv
 ```
 
-初回実行時に OAuth 認証 URL がブラウザで開きます。認可後はローカルの一時コールバックで CLI に自動復帰し、トークンは既定で `~/.config/google-drive-audit/tokens.yaml` に保存されます。保存先は `--token` で変更できます。
+初回実行時に OAuth 認証 URL がブラウザで開きます。認可後は `http://localhost:3000/oauth2callback` のローカルコールバックで CLI に自動復帰し、トークンは既定で `~/.config/google-drive-audit/tokens.yaml` に保存されます。保存先は `--token` で変更できます。
 
 Google API Ruby Client の公式 CLI サンプルと同じ、認証コードを貼り付ける方式を使いたい場合は `--manual-auth` を指定します。
 
