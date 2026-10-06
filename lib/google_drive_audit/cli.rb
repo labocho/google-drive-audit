@@ -18,8 +18,7 @@ module GoogleDriveAudit
       @options = {
         format: "table",
         token: DEFAULT_TOKEN_PATH,
-        include_folders: true,
-        manual_auth: false
+        include_folders: true
       }
     end
 
@@ -29,8 +28,7 @@ module GoogleDriveAudit
 
       credentials = Auth.new(
         client_secrets_path: options.fetch(:credentials),
-        token_path: options.fetch(:token),
-        manual: options.fetch(:manual_auth)
+        token_path: options.fetch(:token)
       ).credentials
       scanner = DriveScanner.new(credentials: credentials)
       audit = Audit.new(
@@ -76,7 +74,6 @@ module GoogleDriveAudit
         opts.on("--token PATH", "OAuthトークン保存先。既定: #{DEFAULT_TOKEN_PATH}") { |value| options[:token] = value }
         opts.on("--format FORMAT", "出力形式: table, csv, json") { |value| options[:format] = value }
         opts.on("--files-only", "フォルダを出力対象から除外する") { options[:include_folders] = false }
-        opts.on("--manual-auth", "公式サンプルと同じ認証コード貼り付け方式を使う") { options[:manual_auth] = true }
         opts.on("-v", "--version", "バージョンを表示する") do
           puts VERSION
           exit

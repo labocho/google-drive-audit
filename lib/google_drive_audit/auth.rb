@@ -6,7 +6,6 @@ require "googleauth/stores/file_token_store"
 require "json"
 require "launchy"
 require "net/http"
-require "securerandom"
 require "signet/oauth_2/client"
 require "socket"
 require "timeout"
@@ -15,7 +14,6 @@ require "webrick"
 
 module GoogleDriveAudit
   class Auth
-    OOB_URI = "urn:ietf:wg:oauth:2.0:oob"
     DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
     OAuthClientConfig = Data.define(
       :kind,
@@ -26,12 +24,11 @@ module GoogleDriveAudit
       :token_uri
     )
 
-    def initialize(client_secrets_path:, token_path:, scope: DEFAULT_SCOPE, callback_host: "localhost", manual: false)
+    def initialize(client_secrets_path:, token_path:, scope: DEFAULT_SCOPE, callback_host: "localhost")
       @client_secrets_path = client_secrets_path
       @token_path = token_path
       @scope = scope
       @callback_host = callback_host
-      @manual = manual
     end
 
     def credentials(user_id: "default")
@@ -42,55 +39,27 @@ module GoogleDriveAudit
         config.client_id,
         scope,
         token_store,
-        callback_uri: manual ? OOB_URI : config.callback_uri
+        callback_uri: config.callback_uri
       )
       credentials = authorizer.get_credentials(token_user_id)
       return credentials if credentials
 
-      return manual_credentials(authorizer, token_user_id) if manual
-      return web_credentials(config, token_user_id) if config.kind == "web"
-
-      code_verifier = generate_code_verifier
-      pkce_authorizer = Google::Auth::UserAuthorizer.new(
-        config.client_id,
-        scope,
-        token_store,
-        callback_uri: config.callback_uri,
-        code_verifier: code_verifier
-      )
-      callback = callback_receiver(config.callback_uri)
-      url = pkce_authorizer.get_authorization_url(base_url: callback.base_url)
-      debug_auth_config(config: config, callback: callback, authorization_url: url, code_verifier: code_verifier)
-      warn "OAuth認証URLを開きます。ブラウザで許可するとCLIへ自動で戻ります。"
-      Launchy.open(url)
-      warn "ブラウザが開かない場合は次のURLを開いてください:"
-      warn url
-      code = callback.wait_for_code
-      warn "[auth-debug] received_code_length=#{code.length}" if auth_debug?
-
-      pkce_authorizer.get_and_store_credentials_from_code(
-        user_id: token_user_id,
-        code: code,
-        base_url: callback.base_url
-      )
-    ensure
-      callback&.shutdown
+      web_credentials(config, token_user_id)
     end
 
     private
 
-    attr_reader :client_secrets_path, :token_path, :scope, :callback_host, :manual
+    attr_reader :client_secrets_path, :token_path, :scope, :callback_host
 
     def oauth_client_config
       data = JSON.parse(File.read(client_secrets_path))
-      kind = data.key?("web") ? "web" : "installed"
-      client = data[kind]
+      client = data["web"]
       unless client && client["client_id"] && client["client_secret"]
-        raise ArgumentError, "OAuthクライアントJSONの形式が不正です: #{client_secrets_path}"
+        raise ArgumentError, "Web アプリケーションのOAuthクライアントJSONを指定してください: #{client_secrets_path}"
       end
 
       OAuthClientConfig.new(
-        kind,
+        "web",
         Google::Auth::ClientId.new(client.fetch("client_id"), client.fetch("client_secret")),
         callback_uri_for(client),
         Array(client["redirect_uris"]),
@@ -143,7 +112,7 @@ module GoogleDriveAudit
         prompt: "consent",
         include_granted_scopes: "true"
       ).to_s
-      debug_auth_config(config: config, callback: callback, authorization_url: url, code_verifier: nil)
+      debug_auth_config(config: config, callback: callback, authorization_url: url)
       warn "OAuth認証URLを開きます。ブラウザで許可するとCLIへ自動で戻ります。"
       Launchy.open(url)
       warn "ブラウザが開かない場合は次のURLを開いてください:"
@@ -195,11 +164,7 @@ module GoogleDriveAudit
       raise Signet::AuthorizationError, "Authorization failed.  Server message:\n#{response&.body}"
     end
 
-    def generate_code_verifier
-      SecureRandom.alphanumeric(64)
-    end
-
-    def debug_auth_config(config:, callback:, authorization_url:, code_verifier:)
+    def debug_auth_config(config:, callback:, authorization_url:)
       return unless auth_debug?
 
       redirect_uri = URI.parse(authorization_url).query&.then do |query|
@@ -213,8 +178,7 @@ module GoogleDriveAudit
       warn "[auth-debug] authorization_redirect_uri=#{redirect_uri}"
       warn "[auth-debug] auth_uri=#{config.auth_uri}"
       warn "[auth-debug] token_uri=#{config.token_uri}"
-      warn "[auth-debug] pkce=#{code_verifier ? "enabled" : "disabled"}"
-      warn "[auth-debug] code_verifier_length=#{code_verifier.length}" if code_verifier
+      warn "[auth-debug] pkce=disabled"
     end
 
     def debug_token_exchange(oauth_client)
@@ -237,23 +201,6 @@ module GoogleDriveAudit
 
     def auth_debug?
       ENV["GDRIVE_AUDIT_DEBUG"] == "1"
-    end
-
-    def manual_credentials(authorizer, user_id)
-      url = authorizer.get_authorization_url(base_url: OOB_URI)
-      warn "OAuth認証URLを開きます。ブラウザで許可したあと、表示された認証コードを貼り付けてください。"
-      Launchy.open(url)
-      warn "ブラウザが開かない場合は次のURLを開いてください:"
-      warn url
-      print "認証コード: "
-      code = $stdin.gets&.strip
-      raise "認証コードが入力されませんでした" if code.nil? || code.empty?
-
-      authorizer.get_and_store_credentials_from_code(
-        user_id: user_id,
-        code: code,
-        base_url: OOB_URI
-      )
     end
 
     def callback_receiver(callback_uri)

@@ -25,7 +25,7 @@ class AuthTest < Minitest::Test
     end
   end
 
-  def test_credentials_without_explicit_port_use_relative_callback_path
+  def test_installed_credentials_are_rejected
     Dir.mktmpdir do |dir|
       credentials_path = File.join(dir, "client_secret.json")
       File.write(credentials_path, JSON.generate(
@@ -40,16 +40,8 @@ class AuthTest < Minitest::Test
         token_path: File.join(dir, "tokens.yaml")
       )
 
-      assert_equal "/oauth2callback", auth.send(:oauth_client_config).callback_uri
+      error = assert_raises(ArgumentError) { auth.send(:oauth_client_config) }
+      assert_includes error.message, "Web アプリケーション"
     end
-  end
-
-  def test_code_verifier_length_is_valid_for_pkce
-    auth = GoogleDriveAudit::Auth.new(
-      client_secrets_path: "unused.json",
-      token_path: "unused.yaml"
-    )
-
-    assert_includes 43..128, auth.send(:generate_code_verifier).length
   end
 end
