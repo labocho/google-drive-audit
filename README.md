@@ -4,20 +4,13 @@ Google ドライブの指定フォルダ以下を再帰走査し、指定期間�
 
 ## セットアップ
 
-1. Google Cloud で OAuth クライアント ID を作成します。
-   - 有効にする API: Google Drive API
-   - 有効にする API: Google Drive Activity API
-   - OAuth 同意画面を設定します。
-   - 公開ステータスがテストの場合は、実行時に認証する Google アカウントをテストユーザに追加します。
-   - OAuth クライアント ID の種類は **Web アプリケーション** を選びます。
-   - 承認済みのリダイレクト URI に `http://localhost:3000/oauth2callback` を追加します。
-2. クライアント JSON をダウンロードします。
-3. 依存 gem をインストールします。
-
-```sh
-bundle install
-chmod +x bin/gdrive-audit
-```
+1. Google Cloud Console でプロジェクトを作成
+2. 「API とサービス」→「ライブラリ」から Google Drive API, Google Drive Activity API を有効化
+3. 「API とサービス」→「OAuth 同意画面」を設定し、「対象」→「テストユーザ」からテストユーザを追加
+4. 「API とサービス」→「認証情報」→「認証情報を作成」→「OAuth クライアント ID」
+  - アプリの種類は「ウェブアプリケーション」を選択
+  - 承認済みのリダイレクト URI に`http://localhost:3000/oauth2callback` を設定
+  - client secret (JSON) を取得して保存
 
 ## 使い方
 
