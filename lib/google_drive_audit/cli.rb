@@ -4,6 +4,7 @@ require "optparse"
 require "pathname"
 
 require_relative "audit"
+require_relative "activity_scanner"
 require_relative "auth"
 require_relative "drive_scanner"
 require_relative "formatters"
@@ -31,8 +32,10 @@ module GoogleDriveAudit
         token_path: options.fetch(:token)
       ).credentials
       scanner = DriveScanner.new(credentials: credentials)
+      activity_scanner = ActivityScanner.new(credentials: credentials)
       audit = Audit.new(
         scanner: scanner,
+        activity_scanner: activity_scanner,
         from: options.fetch(:from),
         to: options.fetch(:to),
         user_email: options.fetch(:user),

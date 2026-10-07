@@ -6,6 +6,7 @@ Google ドライブの指定フォルダ以下を再帰走査し、指定期間�
 
 1. Google Cloud で OAuth クライアント ID を作成します。
    - 有効にする API: Google Drive API
+   - 有効にする API: Google Drive Activity API
    - OAuth 同意画面を設定します。
    - 公開ステータスがテストの場合は、実行時に認証する Google アカウントをテストユーザに追加します。
    - OAuth クライアント ID の種類は **Web アプリケーション** を選びます。
@@ -36,4 +37,6 @@ bin/gdrive-audit \
 
 ## 取得できる変更
 
-この CLI は Google Drive API v3 のファイルメタデータを使い、現在の `modifiedTime` と `lastModifyingUser` をもとに絞り込みます。過去のすべての編集イベントや閲覧履歴の監査ログを取得するものではありません。
+この CLI は Google Drive API v3 のファイルメタデータを使い、現在の `modifiedTime` と `lastModifyingUser` をもとに絞り込みます。加えて、Drive Activity API v2 を使って指定フォルダ配下の `MOVE` アクティビティも一覧します。移動履歴行では `old_parent_path` と `new_parent_path` に移動前後の親フォルダ名を出力します。親フォルダ名が取得できない場合、名前列は空になります。親フォルダIDが取得できる場合は `old_parent_url` と `new_parent_url` に Google Drive URL を出力します。
+
+Drive Activity API で返される actor はメールアドレスではなく「現在の認証ユーザ」として表現される場合があります。そのため、移動履歴の検出は `--user` に指定したメールアドレスのアカウントで OAuth 認証している前提です。

@@ -4,8 +4,9 @@ require "time"
 
 module GoogleDriveAudit
   class Audit
-    def initialize(scanner:, from:, to:, user_email:, include_folders: true)
+    def initialize(scanner:, from:, to:, user_email:, include_folders: true, activity_scanner: nil)
       @scanner = scanner
+      @activity_scanner = activity_scanner
       @from = Time.iso8601(from)
       @to = Time.iso8601(to)
       @user_email = user_email.downcase
@@ -15,7 +16,7 @@ module GoogleDriveAudit
     end
 
     def rows(root_id)
-      scanner.each_item(root_id).filter_map do |item|
+      metadata_rows = scanner.each_item(root_id).filter_map do |item|
         warn "Scanning item: #{item.name} (#{item.id})" if ENV["GDRIVE_AUDIT_DEBUG"]
         next if item.folder? && !include_folders
         next unless modified_in_range?(item.modified_time)
@@ -23,11 +24,13 @@ module GoogleDriveAudit
 
         item
       end
+      activity_rows = activity_scanner ? activity_scanner.move_rows(root_id, from: from, to: to, user_email: user_email) : []
+      (metadata_rows + activity_rows).sort_by { |row| row.modified_time.to_s }
     end
 
     private
 
-    attr_reader :scanner, :from, :to, :user_email, :include_folders
+    attr_reader :scanner, :activity_scanner, :from, :to, :user_email, :include_folders
 
     def modified_in_range?(modified_time)
       return false if modified_time.nil?

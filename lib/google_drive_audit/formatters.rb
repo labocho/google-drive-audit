@@ -14,6 +14,10 @@ module GoogleDriveAudit
       "created_time",
       "last_modifying_user_email",
       "last_modifying_user_name",
+      "old_parent_path",
+      "new_parent_path",
+      "old_parent_url",
+      "new_parent_url",
       "web_view_link"
     ].freeze
 
@@ -62,8 +66,16 @@ module GoogleDriveAudit
         "created_time" => row.created_time,
         "last_modifying_user_email" => row.last_modifying_user_email,
         "last_modifying_user_name" => row.last_modifying_user_name,
+        "old_parent_path" => optional_value(row, :old_parent_path),
+        "new_parent_path" => optional_value(row, :new_parent_path),
+        "old_parent_url" => optional_value(row, :old_parent_url),
+        "new_parent_url" => optional_value(row, :new_parent_url),
         "web_view_link" => row.web_view_link
       }
+    end
+
+    def optional_value(row, method_name)
+      row.respond_to?(method_name) ? row.public_send(method_name) : nil
     end
   end
 end

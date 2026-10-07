@@ -14,7 +14,10 @@ require "webrick"
 
 module GoogleDriveAudit
   class Auth
-    DEFAULT_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
+    DEFAULT_SCOPE = [
+      "https://www.googleapis.com/auth/drive.metadata.readonly",
+      "https://www.googleapis.com/auth/drive.activity.readonly"
+    ].freeze
     OAuthClientConfig = Data.define(
       :kind,
       :client_id,

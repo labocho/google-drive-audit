@@ -38,6 +38,19 @@ class AuditTest < Minitest::Test
     assert_empty audit.rows("root")
   end
 
+  def test_rows_include_activity_rows
+    activity_row = item("moved", "2026-10-02T12:00:00+09:00", "nishi@example.com")
+    audit = GoogleDriveAudit::Audit.new(
+      scanner: FakeScanner.new([]),
+      activity_scanner: FakeActivityScanner.new([activity_row]),
+      from: "2026-10-01T00:00:00+09:00",
+      to: "2026-10-03T00:00:00+09:00",
+      user_email: "nishi@example.com"
+    )
+
+    assert_equal ["moved"], audit.rows("root").map(&:name)
+  end
+
   private
 
   def item(name, modified_time, email, mime_type: "text/plain")
@@ -61,6 +74,16 @@ class AuditTest < Minitest::Test
 
     def each_item(_root_id)
       @items.each
+    end
+  end
+
+  class FakeActivityScanner
+    def initialize(rows)
+      @rows = rows
+    end
+
+    def move_rows(_root_id, from:, to:, user_email:)
+      @rows
     end
   end
 end
